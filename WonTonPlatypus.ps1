@@ -1,3 +1,5 @@
+# A popular Windows Security Assessment Tool with some variables rewritten to keep from being observed @cmndcntrlcyber
+
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Ssl3 -bor [Net.SecurityProtocolType]::Ssl2 -bor [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
 
 function AmsiBypass

