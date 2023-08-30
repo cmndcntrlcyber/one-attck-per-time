@@ -1,5 +1,4 @@
 # A popular AD Security Assessment tool with the variable keywords changed to keep from being observed. @cmndcntrlcyber
-
 Function Invoke-AppleDogPeas {
 <#
 .PARAMETER Domain

