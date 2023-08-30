@@ -1,4 +1,4 @@
-##[17::Anomaly: Systems using many different protocols::Reyes-R17-Anomaly: Systems using many different protocols]
+##[17::Anomaly: Systems using many different protocols::-R17-Anomaly: Systems using many different protocols]
 # Crafted APT URL IOC
 $target = '10.4.9.171'
 
