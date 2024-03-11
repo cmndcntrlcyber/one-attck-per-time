@@ -24,4 +24,3 @@ def encrypt_files(directory):
 
 if __name__ == "__main__":
     directory = "C:\Users\cmndcntrl\Desktop\encrypt-test\/"  # Replace with the actual directory path
-    encrypt_files(directory)
