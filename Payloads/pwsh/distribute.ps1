@@ -1,5 +1,3 @@
-
-
 $machines1 = Get-Content -Path "list.txt" 
 $machines2 = Get-Content -Path "list2.txt"
 
