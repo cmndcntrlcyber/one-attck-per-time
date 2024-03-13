@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# Data Encrypted for Impact (T1486)
-=======
 import os
 import pyminizip
 import shutil
@@ -27,5 +24,3 @@ def encrypt_files(directory):
 
 if __name__ == "__main__":
     directory = "C:\Users\cmndcntrl\Desktop\encrypt-test\/"  # Replace with the actual directory path
-    encrypt_files(directory)
->>>>>>> 3fa6254e59cdd81fce0134a0bb1713db9f282b81
