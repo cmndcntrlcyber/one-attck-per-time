@@ -28,7 +28,7 @@ Listeners {
         #WorkingHours = "8:00-17:00"
         
         Hosts        = [
-            "havoc-attck-node.net",
+            "havoc-attck-node.net"
         ]
         
         HostBind     = "0.0.0.0"
@@ -52,12 +52,12 @@ Listeners {
             "X-ATTCK-EMU: Demon"
         ]
 
-        Certs {
-            Cert = [
-                Cert = "/etc/letsencrypt/live/havoc.attck-node.net/fullchain.pem",
-                Key = "/etc/letsencrypt/live/havoc.attck-node.net/privkey.pem"
-            ]
-        }
+        
+        Cert = [
+            Cert = "/etc/letsencrypt/live/havoc.attck-node.net/fullchain.pem",
+            Key = "/etc/letsencrypt/live/havoc.attck-node.net/privkey.pem"
+        ]
+    
 
         Response {
             Headers = [
