@@ -22,12 +22,15 @@ Operators {
 Listeners {
 
     Http {
+        
         Name         = "Agent Listener - HTTP/s"
-        #KillDate     = "2006-01-02 15:04:05" 
+        #KillDate    = "2006-01-02 15:04:05" 
         #WorkingHours = "8:00-17:00"
+        
         Hosts        = [
             "havoc-attck-node.net",
         ]
+        
         HostBind     = "0.0.0.0"
         PortBind     = 443
         PortConn     = 443
@@ -45,8 +48,8 @@ Listeners {
 
         Headers = [
             "Content-type: text/plain",
-            "X-Havoc: true",
-            "X-Havoc-Agent: Demon",
+            "X-ATTCK-Node: true",
+            "X-ATTCK-EMU: Demon",
         ]
 
         Cert = [
@@ -57,7 +60,7 @@ Listeners {
         Response {
             Headers = [
                 "Content-type: text/plain",
-                "X-IsHavocFramework: true",
+                "X-ATTCK-EMU: true",
             ]
         }
     }
