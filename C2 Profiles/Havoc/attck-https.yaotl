@@ -49,7 +49,7 @@ Listeners {
         Headers = [
             "Content-type: text/plain",
             "X-ATTCK-Node: true",
-            "X-ATTCK-EMU: Demon",
+            "X-ATTCK-EMU: Demon"
         ]
 
         Cert = [
