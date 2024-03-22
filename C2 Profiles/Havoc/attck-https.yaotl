@@ -27,7 +27,9 @@ Listeners {
         #KillDate    = "2006-01-02 15:04:05" 
         #WorkingHours = "8:00-17:00"
         
-        Hosts        = "havoc-attck-node.net
+        Hosts        = [
+            "havoc-attck-node.net"
+        ]
         HostBind     = "0.0.0.0"
         PortBind     = 443
         PortConn     = 443
