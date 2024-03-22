@@ -52,10 +52,12 @@ Listeners {
             "X-ATTCK-EMU: Demon"
         ]
 
-        Cert = [
-		    Cert = "/etc/letsencrypt/live/havoc.attck-node.net/fullchain.pem",
-		    Key = "/etc/letsencrypt/live/havoc.attck-node.net/privkey.pem"
-        ]
+        Certs {
+            Cert = [
+                Cert = "/etc/letsencrypt/live/havoc.attck-node.net/fullchain.pem",
+                Key = "/etc/letsencrypt/live/havoc.attck-node.net/privkey.pem"
+            ]
+        }
 
         Response {
             Headers = [
