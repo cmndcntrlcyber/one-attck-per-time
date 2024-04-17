@@ -27,10 +27,7 @@ Listeners {
         #KillDate    = "2006-01-02 15:04:05" 
         #WorkingHours = "8:00-17:00"
         
-        Hosts        = [
-            "havoc-attck-node.net",
-        ]
-        
+        Hosts        = ["havoc-attck-node.net"]
         HostBind     = "0.0.0.0"
         PortBind     = 443
         PortConn     = 443
@@ -49,13 +46,15 @@ Listeners {
         Headers = [
             "Content-type: text/plain",
             "X-ATTCK-Node: true",
-            "X-ATTCK-EMU: Demon",
+            "X-ATTCK-EMU: Demon"
         ]
 
+        
         Cert = [
-		    Cert = "/etc/letsencrypt/live/havoc.attck-node.net/fullchain.pem",
-		    Key = "/etc/letsencrypt/live/havoc.attck-node.net/privkey.pem"
+            Cert = "/etc/letsencrypt/live/havoc.attck-node.net/fullchain.pem",
+            Key = "/etc/letsencrypt/live/havoc.attck-node.net/privkey.pem"
         ]
+    
 
         Response {
             Headers = [

