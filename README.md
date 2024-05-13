@@ -9,7 +9,7 @@ The companion project to stage the payloads for local testing can be found here 
 ## Origin Story
 This is a project that I started thinking of while performing single-execution threat emulation to evaluate the effectiveness of commercial SIEM products' rules, configurations and interoperability. The basic idea is to make a video and guided writeup for each of the MITRE ATT&CK TTP’s of the different techniques to execute. Sorta like Atomic but with a more “educational” twist.  
 ## ATT&CK's
-### Coming Soon
+### [TA0042: Resource Development](https://github.com/cmndcntrlcyber/one-attck-per-time/blob/main/TA0042/Resource%20Development.md)
 
 # Disclaimer
 **One 'ATT&CK' at a Time** is developed for educational purposes only. Neither the creators nor contributors of **One 'ATT&CK' at a Time** are responsible for any misuse of these resources. The resources provided should not be used in any unauthorized or illegal manner. Always ensure ethical and legal use of the tools and techniques provided here.
