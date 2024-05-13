@@ -7,7 +7,7 @@ The companion project to stage the payloads for local testing can be found here 
 ](https://github.com/cmndcntrlcyber/attck/tree/main?tab=readme-ov-file#one-attck-at-a-time-stage). 
 
 ## Origin Story
-This is a project that I started thinking of while performing single-execution threat emulation to evaluate the effectiveness of commercial SIEM products' rules, configurations and interoperability. The basic idea is to make a video and guided writeup for each of the MITRE ATT&CK TTP’s of the different techniques to execute. Sorta like Atomic but with a more “educational” twist.  
+This is a project that I started thinking of while performing single-execution threat emulation to evaluate the effectiveness of commercial SIEM products' rules, configurations and interoperability. The basic idea is to make a video and guided writeup for each of the MITRE ATT&CK TTP’s of the different techniques to execute. Sorta like Atomic but with a more community-driven “educational” twist.  
 ## ATT&CK's
 ### [TA0042: Resource Development](https://github.com/cmndcntrlcyber/one-attck-per-time/blob/main/TA0042/Resource%20Development.md)
 
