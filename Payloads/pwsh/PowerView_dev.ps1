@@ -1,11 +1,49 @@
 #requires -version 2
 
+<#
+
+PowerSploit File: PowerView.ps1
+Author: Will Schroeder (@harmj0y)
+License: BSD 3-Clause
+Required Dependencies: None
+
+#>
+
+
+########################################################
+#
+# PSReflect code for Windows API access
+# Author: @mattifestation
+#   https://raw.githubusercontent.com/mattifestation/PSReflect/master/PSReflect.psm1
+#
+########################################################
 
 function New-InMemoryModule {
 <#
 .SYNOPSIS
+
+Creates an in-memory assembly and module
+
+Author: Matthew Graeber (@mattifestation)
+License: BSD 3-Clause
+Required Dependencies: None
+Optional Dependencies: None
+
 .DESCRIPTION
+
+When defining custom enums, structs, and unmanaged functions, it is
+necessary to associate to an assembly module. This helper function
+creates an in-memory module that can be passed to the 'enum',
+'struct', and Add-Win32Type functions.
+
 .PARAMETER ModuleName
+
+Specifies the desired name for the in-memory assembly and module. If
+ModuleName is not provided, it will default to a GUID.
+
+.EXAMPLE
+
+$Module = New-InMemoryModule -ModuleName Win32
 #>
 
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '')]
@@ -35,6 +73,8 @@ function New-InMemoryModule {
 }
 
 
+# A helper function used to reduce typing while defining function
+# prototypes for Add-Win32Type.
 function func {
     Param (
         [Parameter(Position = 0, Mandatory = $True)]
@@ -89,17 +129,94 @@ function Add-Win32Type
 <#
 .SYNOPSIS
 
+Creates a .NET type for an unmanaged Win32 function.
+
+Author: Matthew Graeber (@mattifestation)
+License: BSD 3-Clause
+Required Dependencies: None
+Optional Dependencies: func
+
 .DESCRIPTION
+
+Add-Win32Type enables you to easily interact with unmanaged (i.e.
+Win32 unmanaged) functions in PowerShell. After providing
+Add-Win32Type with a function signature, a .NET type is created
+using reflection (i.e. csc.exe is never called like with Add-Type).
+
+The 'func' helper function can be used to reduce typing when defining
+multiple function definitions.
+
 .PARAMETER DllName
+
+The name of the DLL.
+
 .PARAMETER FunctionName
+
+The name of the target function.
+
 .PARAMETER EntryPoint
+
+The DLL export function name. This argument should be specified if the
+specified function name is different than the name of the exported
+function.
+
 .PARAMETER ReturnType
+
+The return type of the function.
+
 .PARAMETER ParameterTypes
+
+The function parameters.
+
 .PARAMETER NativeCallingConvention
+
+Specifies the native calling convention of the function. Defaults to
+stdcall.
+
 .PARAMETER Charset
+
+If you need to explicitly call an 'A' or 'W' Win32 function, you can
+specify the character set.
+
 .PARAMETER SetLastError
+
+Indicates whether the callee calls the SetLastError Win32 API
+function before returning from the attributed method.
+
 .PARAMETER Module
+
+The in-memory module that will host the functions. Use
+New-InMemoryModule to define an in-memory module.
+
 .PARAMETER Namespace
+
+An optional namespace to prepend to the type. Add-Win32Type defaults
+to a namespace consisting only of the name of the DLL.
+
+.EXAMPLE
+
+$Mod = New-InMemoryModule -ModuleName Win32
+
+$FunctionDefinitions = @(
+  (func kernel32 GetProcAddress ([IntPtr]) @([IntPtr], [String]) -Charset Ansi -SetLastError),
+  (func kernel32 GetModuleHandle ([Intptr]) @([String]) -SetLastError),
+  (func ntdll RtlGetCurrentPeb ([IntPtr]) @())
+)
+
+$Types = $FunctionDefinitions | Add-Win32Type -Module $Mod -Namespace 'Win32'
+$Kernel32 = $Types['kernel32']
+$Ntdll = $Types['ntdll']
+$Ntdll::RtlGetCurrentPeb()
+$ntdllbase = $Kernel32::GetModuleHandle('ntdll')
+$Kernel32::GetProcAddress($ntdllbase, 'RtlGetCurrentPeb')
+
+.NOTES
+
+Inspired by Lee Holmes' Invoke-WindowsApi http://poshcode.org/2189
+
+When defining multiple function prototypes, it is ideal to provide
+Add-Win32Type with an array of function signatures. That way, they
+are all incorporated into the same in-memory module.
 #>
 
     [OutputType([Hashtable])]
@@ -165,6 +282,7 @@ function Add-Win32Type
         }
         else
         {
+            # Define one type for each DLL
             if (!$TypeHash.ContainsKey($DllName))
             {
                 if ($Namespace)
@@ -204,7 +322,7 @@ function Add-Win32Type
 
             if ($PSBoundParameters['EntryPoint']) { $ExportedFuncName = $EntryPoint } else { $ExportedFuncName = $FunctionName }
 
-            
+            # Equivalent to C# version of [DllImport(DllName)]
             $Constructor = [Runtime.InteropServices.DllImportAttribute].GetConstructor([String])
             $DllImportAttribute = New-Object Reflection.Emit.CustomAttributeBuilder($Constructor,
                 $DllName, [Reflection.PropertyInfo[]] @(), [Object[]] @(),
@@ -245,12 +363,67 @@ function Add-Win32Type
 function psenum {
 <#
 .SYNOPSIS
+
+Creates an in-memory enumeration for use in your PowerShell session.
+
+Author: Matthew Graeber (@mattifestation)
+License: BSD 3-Clause
+Required Dependencies: None
+Optional Dependencies: None
+
 .DESCRIPTION
+
+The 'psenum' function facilitates the creation of enums entirely in
+memory using as close to a "C style" as PowerShell will allow.
+
 .PARAMETER Module
+
+The in-memory module that will host the enum. Use
+New-InMemoryModule to define an in-memory module.
+
 .PARAMETER FullName
+
+The fully-qualified name of the enum.
+
 .PARAMETER Type
+
+The type of each enum element.
+
 .PARAMETER EnumElements
+
+A hashtable of enum elements.
+
 .PARAMETER Bitfield
+
+Specifies that the enum should be treated as a bitfield.
+
+.EXAMPLE
+
+$Mod = New-InMemoryModule -ModuleName Win32
+
+$ImageSubsystem = psenum $Mod PE.IMAGE_SUBSYSTEM UInt16 @{
+    UNKNOWN =                  0
+    NATIVE =                   1 # Image doesn't require a subsystem.
+    WINDOWS_GUI =              2 # Image runs in the Windows GUI subsystem.
+    WINDOWS_CUI =              3 # Image runs in the Windows character subsystem.
+    OS2_CUI =                  5 # Image runs in the OS/2 character subsystem.
+    POSIX_CUI =                7 # Image runs in the Posix character subsystem.
+    NATIVE_WINDOWS =           8 # Image is a native Win9x driver.
+    WINDOWS_CE_GUI =           9 # Image runs in the Windows CE subsystem.
+    EFI_APPLICATION =          10
+    EFI_BOOT_SERVICE_DRIVER =  11
+    EFI_RUNTIME_DRIVER =       12
+    EFI_ROM =                  13
+    XBOX =                     14
+    WINDOWS_BOOT_APPLICATION = 16
+}
+
+.NOTES
+
+PowerShell purists may disagree with the naming of this function but
+again, this was developed in such a way so as to emulate a "C style"
+definition as closely as possible. Sorry, I'm not going to name it
+New-Enum. :P
 #>
 
     [OutputType([Type])]
@@ -552,11 +725,11 @@ New-Struct. :P
 }
 
 
-
+########################################################
 #
 # Misc. helpers
 #
-
+########################################################
 
 Function New-DynamicParameter {
 <#
@@ -1203,8 +1376,39 @@ http://dmitrysotnikov.wordpress.com/2010/01/19/Export-Csv-append/
 
 function Resolve-IPAddress {
 <#
+.SYNOPSIS
+
+Resolves a given hostename to its associated IPv4 address.
+
+Author: Will Schroeder (@harmj0y)  
+License: BSD 3-Clause  
+Required Dependencies: None  
+
+.DESCRIPTION
+
+Resolves a given hostename to its associated IPv4 address using
+[Net.Dns]::GetHostEntry(). If no hostname is provided, the default
+is the IP address of the localhost.
+
+.EXAMPLE
+
+Resolve-IPAddress -ComputerName SERVER
+
+.EXAMPLE
+
+@("SERVER1", "SERVER2") | Resolve-IPAddress
+
 .INPUTS
+
+String
+
+Accepts one or more IP address strings on the pipeline.
+
 .OUTPUTS
+
+System.Management.Automation.PSCustomObject
+
+A custom PSObject with the ComputerName and IPAddress.
 #>
 
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSShouldProcess', '')]
@@ -1240,12 +1444,62 @@ function Resolve-IPAddress {
 
 function ConvertTo-SID {
 <#
+.SYNOPSIS
+
+Converts a given user/group name to a security identifier (SID).
+
+Author: Will Schroeder (@harmj0y)  
+License: BSD 3-Clause  
+Required Dependencies: Convert-ADName, Get-DomainObject, Get-Domain  
+
+.DESCRIPTION
+
+Converts a "DOMAIN\username" syntax to a security identifier (SID)
+using System.Security.Principal.NTAccount's translate function. If alternate
+credentials are supplied, then Get-ADObject is used to try to map the name
+to a security identifier.
+
 .PARAMETER ObjectName
+
+The user/group name to convert, can be 'user' or 'DOMAIN\user' format.
+
 .PARAMETER Domain
+
+Specifies the domain to use for the translation, defaults to the current domain.
+
 .PARAMETER Server
+
+Specifies an Active Directory server (domain controller) to bind to for the translation.
+
 .PARAMETER Credential
+
+Specifies an alternate credential to use for the translation.
+
+.EXAMPLE
+
+ConvertTo-SID 'DEV\dfm'
+
+.EXAMPLE
+
+'DEV\dfm','DEV\krbtgt' | ConvertTo-SID
+
+.EXAMPLE
+
+$SecPassword = ConvertTo-SecureString 'Password123!' -AsPlainText -Force
+$Cred = New-Object System.Management.Automation.PSCredential('TESTLAB\dfm.a', $SecPassword)
+'TESTLAB\dfm' | ConvertTo-SID -Credential $Cred
+
 .INPUTS
+
+String
+
+Accepts one or more username specification strings on the pipeline.
+
 .OUTPUTS
+
+String
+
+A string representing the SID of the translated name.
 #>
 
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSShouldProcess', '')]
@@ -1319,12 +1573,68 @@ function ConvertTo-SID {
 
 function ConvertFrom-SID {
 <#
+.SYNOPSIS
+
+Converts a security identifier (SID) to a group/user name.
+
+Author: Will Schroeder (@harmj0y)  
+License: BSD 3-Clause  
+Required Dependencies: Convert-ADName  
+
+.DESCRIPTION
+
+Converts a security identifier string (SID) to a group/user name
+using Convert-ADName.
+
 .PARAMETER ObjectSid
+
+Specifies one or more SIDs to convert.
+
 .PARAMETER Domain
+
+Specifies the domain to use for the translation, defaults to the current domain.
+
 .PARAMETER Server
+
+Specifies an Active Directory server (domain controller) to bind to for the translation.
+
 .PARAMETER Credential
+
+Specifies an alternate credential to use for the translation.
+
+.EXAMPLE
+
+ConvertFrom-SID S-1-5-21-890171859-3433809279-3366196753-1108
+
+TESTLAB\harmj0y
+
+.EXAMPLE
+
+"S-1-5-21-890171859-3433809279-3366196753-1107", "S-1-5-21-890171859-3433809279-3366196753-1108", "S-1-5-32-562" | ConvertFrom-SID
+
+TESTLAB\WINDOWS2$
+TESTLAB\harmj0y
+BUILTIN\Distributed COM Users
+
+.EXAMPLE
+
+$SecPassword = ConvertTo-SecureString 'Password123!' -AsPlainText -Force
+$Cred = New-Object System.Management.Automation.PSCredential('TESTLAB\dfm', $SecPassword)
+ConvertFrom-SID S-1-5-21-890171859-3433809279-3366196753-1108 -Credential $Cred
+
+TESTLAB\harmj0y
+
 .INPUTS
+
+String
+
+Accepts one or more SID strings on the pipeline.
+
 .OUTPUTS
+
+String
+
+The converted DOMAIN\username.
 #>
 
     [OutputType([String])]
@@ -1361,7 +1671,8 @@ function ConvertFrom-SID {
         ForEach ($TargetSid in $ObjectSid) {
             $TargetSid = $TargetSid.trim('*')
             try {
-                                Switch ($TargetSid) {
+                # try to resolve any built-in SIDs first - https://support.microsoft.com/en-us/kb/243330
+                Switch ($TargetSid) {
                     'S-1-0'         { 'Null Authority' }
                     'S-1-0-0'       { 'Nobody' }
                     'S-1-1'         { 'World Authority' }
@@ -1569,21 +1880,22 @@ https://gallery.technet.microsoft.com/scriptcenter/Translating-Active-5c80dd67
 
     BEGIN {
         $NameTypes = @{
-            'DN'                =   1              
-            'Canonical'         =   2              
-            'NT4'               =   3              
-            'Display'           =   4              
-            'DomainSimple'      =   5              
-            'EnterpriseSimple'  =   6              
-            'GUID'              =   7              
-            'Unknown'           =   8              
-            'UPN'               =   9              
-            'CanonicalEx'       =   10             
-            'SPN'               =   11             
-            'SID'               =   12         
+            'DN'                =   1  # CN=Phineas Flynn,OU=Engineers,DC=fabrikam,DC=com
+            'Canonical'         =   2  # fabrikam.com/Engineers/Phineas Flynn
+            'NT4'               =   3  # fabrikam\pflynn
+            'Display'           =   4  # pflynn
+            'DomainSimple'      =   5  # pflynn@fabrikam.com
+            'EnterpriseSimple'  =   6  # pflynn@fabrikam.com
+            'GUID'              =   7  # {95ee9fff-3436-11d1-b2b0-d15ae3ac8436}
+            'Unknown'           =   8  # unknown type - let the server do translation
+            'UPN'               =   9  # pflynn@fabrikam.com
+            'CanonicalEx'       =   10 # fabrikam.com/Users/Phineas Flynn
+            'SPN'               =   11 # HTTP/kairomac.contoso.com
+            'SID'               =   12 # S-1-5-21-12986231-600641547-709122288-57999
         }
 
-                function Invoke-Method([__ComObject] $Object, [String] $Method, $Parameters) {
+        # accessor functions from Bill Stewart to simplify calls to NameTranslate
+        function Invoke-Method([__ComObject] $Object, [String] $Method, $Parameters) {
             $Output = $Null
             $Output = $Object.GetType().InvokeMember($Method, 'InvokeMethod', $NULL, $Object, $Parameters)
             Write-Output $Output
@@ -1597,7 +1909,8 @@ https://gallery.technet.microsoft.com/scriptcenter/Translating-Active-5c80dd67
             [Void] $Object.GetType().InvokeMember($Property, 'SetProperty', $NULL, $Object, $Parameters)
         }
 
-            if ($PSBoundParameters['Server']) {
+        # https://msdn.microsoft.com/en-us/library/aa772266%28v=vs.85%29.aspx
+        if ($PSBoundParameters['Server']) {
             $ADSInitType = 2
             $InitName = $Server
         }
@@ -1611,6 +1924,7 @@ https://gallery.technet.microsoft.com/scriptcenter/Translating-Active-5c80dd67
             $InitName = $Cred.Domain
         }
         else {
+            # if no domain or server is specified, default to GC initialization
             $ADSInitType = 3
             $InitName = $Null
         }
@@ -1660,9 +1974,11 @@ https://gallery.technet.microsoft.com/scriptcenter/Translating-Active-5c80dd67
                 }
             }
 
+            # always chase all referrals
             Set-Property $Translate 'ChaseReferral' (0x60)
 
             try {
+                # 8 = Unknown name type -> let the server do the work for us
                 $Null = Invoke-Method $Translate 'Set' (8, $TargetIdentity)
                 Invoke-Method $Translate 'Get' ($ADSOutputType)
             }
@@ -1676,19 +1992,93 @@ https://gallery.technet.microsoft.com/scriptcenter/Translating-Active-5c80dd67
 
 function ConvertFrom-UACValue {
 <#
+.SYNOPSIS
+
+Converts a UAC int value to human readable form.
+
+Author: Will Schroeder (@harmj0y)  
+License: BSD 3-Clause  
+Required Dependencies: None  
+
+.DESCRIPTION
+
+This function will take an integer that represents a User Account
+Control (UAC) binary blob and will covert it to an ordered
+dictionary with each bitwise value broken out. By default only values
+set are displayed- the -ShowAll switch will display all values with
+a + next to the ones set.
 
 .PARAMETER Value
 
+Specifies the integer UAC value to convert.
+
 .PARAMETER ShowAll
+
+Switch. Signals ConvertFrom-UACValue to display all UAC values, with a + indicating the value is currently set.
+
+.EXAMPLE
+
+ConvertFrom-UACValue -Value 66176
+
+Name                           Value
+----                           -----
+ENCRYPTED_TEXT_PWD_ALLOWED     128
+NORMAL_ACCOUNT                 512
+DONT_EXPIRE_PASSWORD           65536
+
+.EXAMPLE
+
+Get-DomainUser harmj0y | ConvertFrom-UACValue
+
+Name                           Value
+----                           -----
+NORMAL_ACCOUNT                 512
+DONT_EXPIRE_PASSWORD           65536
+
+.EXAMPLE
+
+Get-DomainUser harmj0y | ConvertFrom-UACValue -ShowAll
+
+Name                           Value
+----                           -----
+SCRIPT                         1
+ACCOUNTDISABLE                 2
+HOMEDIR_REQUIRED               8
+LOCKOUT                        16
+PASSWD_NOTREQD                 32
+PASSWD_CANT_CHANGE             64
+ENCRYPTED_TEXT_PWD_ALLOWED     128
+TEMP_DUPLICATE_ACCOUNT         256
+NORMAL_ACCOUNT                 512+
+INTERDOMAIN_TRUST_ACCOUNT      2048
+WORKSTATION_TRUST_ACCOUNT      4096
+SERVER_TRUST_ACCOUNT           8192
+DONT_EXPIRE_PASSWORD           65536+
+MNS_LOGON_ACCOUNT              131072
+SMARTCARD_REQUIRED             262144
+TRUSTED_FOR_DELEGATION         524288
+NOT_DELEGATED                  1048576
+USE_DES_KEY_ONLY               2097152
+DONT_REQ_PREAUTH               4194304
+PASSWORD_EXPIRED               8388608
+TRUSTED_TO_AUTH_FOR_DELEGATION 16777216
+PARTIAL_SECRETS_ACCOUNT        67108864
 
 .INPUTS
 
 Int
 
+Accepts an integer representing a UAC binary blob.
+
 .OUTPUTS
 
 System.Collections.Specialized.OrderedDictionary
 
+An ordered dictionary with the converted UAC fields.
+
+.LINK
+
+https://support.microsoft.com/en-us/kb/305144
 #>
 
     [OutputType('System.Collections.Specialized.OrderedDictionary')]
@@ -1704,6 +2094,7 @@ System.Collections.Specialized.OrderedDictionary
     )
 
     BEGIN {
+        # values from https://support.microsoft.com/en-us/kb/305144
         $UACValues = New-Object System.Collections.Specialized.OrderedDictionary
         $UACValues.Add("SCRIPT", 1)
         $UACValues.Add("ACCOUNTDISABLE", 2)
@@ -1756,15 +2147,29 @@ System.Collections.Specialized.OrderedDictionary
 
 function Get-PrincipalContext {
 <#
+.SYNOPSIS
+
+Helper to take an Identity and return a DirectoryServices.AccountManagement.PrincipalContext
+and simplified identity.
+
+Author: Will Schroeder (@harmj0y)  
+License: BSD 3-Clause  
+Required Dependencies: None  
 
 .PARAMETER Identity
 
+A group SamAccountName (e.g. Group1), DistinguishedName (e.g. CN=group1,CN=Users,DC=testlab,DC=local),
+SID (e.g. S-1-5-21-890171859-3433809279-3366196753-1114), or GUID (e.g. 4c435dd7-dc58-4b14-9a5e-1fdb0e80d202),
+or a DOMAIN\username identity.
 
 .PARAMETER Domain
 
+Specifies the domain to use to search for user/group principals, defaults to the current domain.
 
 .PARAMETER Credential
 
+A [Management.Automation.PSCredential] object of alternate credentials
+for connection to the target domain.
 #>
 
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSShouldProcess', '')]
@@ -1789,6 +2194,7 @@ function Get-PrincipalContext {
     try {
         if ($PSBoundParameters['Domain'] -or ($Identity -match '.+\\.+')) {
             if ($Identity -match '.+\\.+') {
+                # DOMAIN\groupname
                 $ConvertedIdentity = $Identity | Convert-ADName -OutputType Canonical
                 if ($ConvertedIdentity) {
                     $ConnectTarget = $ConvertedIdentity.SubString(0, $ConvertedIdentity.IndexOf('/'))
@@ -1835,15 +2241,53 @@ function Get-PrincipalContext {
 
 function Add-RemoteConnection {
 <#
+.SYNOPSIS
+
+Pseudo "mounts" a connection to a remote path using the specified
+credential object, allowing for access of remote resources. If a -Path isn't
+specified, a -ComputerName is required to pseudo-mount IPC$.
+
+Author: Will Schroeder (@harmj0y)  
+License: BSD 3-Clause  
+Required Dependencies: PSReflect  
+
+.DESCRIPTION
+
+This function uses WNetAddConnection2W to make a 'temporary' (i.e. not saved) connection
+to the specified remote -Path (\\UNC\share) with the alternate credentials specified in the
+-Credential object. If a -Path isn't specified, a -ComputerName is required to pseudo-mount IPC$.
+
+To destroy the connection, use Remove-RemoteConnection with the same specified \\UNC\share path
+or -ComputerName.
 
 .PARAMETER ComputerName
 
+Specifies the system to add a \\ComputerName\IPC$ connection for.
 
 .PARAMETER Path
 
+Specifies the remote \\UNC\path to add the connection for.
 
 .PARAMETER Credential
 
+A [Management.Automation.PSCredential] object of alternate credentials
+for connection to the remote system.
+
+.EXAMPLE
+
+$Cred = Get-Credential
+Add-RemoteConnection -ComputerName 'PRIMARY.testlab.local' -Credential $Cred
+
+.EXAMPLE
+
+$SecPassword = ConvertTo-SecureString 'Password123!' -AsPlainText -Force
+$Cred = New-Object System.Management.Automation.PSCredential('TESTLAB\dfm.a', $SecPassword)
+Add-RemoteConnection -Path '\\PRIMARY.testlab.local\C$\' -Credential $Cred
+
+.EXAMPLE
+
+$Cred = Get-Credential
+@('PRIMARY.testlab.local','SECONDARY.testlab.local') | Add-RemoteConnection  -Credential $Cred
 #>
 
     [CmdletBinding(DefaultParameterSetName = 'ComputerName')]
@@ -1886,6 +2330,8 @@ function Add-RemoteConnection {
             $NetResourceInstance.lpRemoteName = $TargetPath
             Write-Verbose "[Add-RemoteConnection] Attempting to mount: $TargetPath"
 
+            # https://msdn.microsoft.com/en-us/library/windows/desktop/aa385413(v=vs.85).aspx
+            #   CONNECT_TEMPORARY = 4
             $Result = $Mpr::WNetAddConnection2W($NetResourceInstance, $Credential.GetNetworkCredential().Password, $Credential.UserName, 4)
 
             if ($Result -eq 0) {
@@ -1901,11 +2347,39 @@ function Add-RemoteConnection {
 
 function Remove-RemoteConnection {
 <#
+.SYNOPSIS
+
+Destroys a connection created by New-RemoteConnection.
+
+Author: Will Schroeder (@harmj0y)  
+License: BSD 3-Clause  
+Required Dependencies: PSReflect  
+
+.DESCRIPTION
+
+This function uses WNetCancelConnection2 to destroy a connection created by
+New-RemoteConnection. If a -Path isn't specified, a -ComputerName is required to
+'unmount' \\$ComputerName\IPC$.
 
 .PARAMETER ComputerName
 
+Specifies the system to remove a \\ComputerName\IPC$ connection for.
+
 .PARAMETER Path
 
+Specifies the remote \\UNC\path to remove the connection for.
+
+.EXAMPLE
+
+Remove-RemoteConnection -ComputerName 'PRIMARY.testlab.local'
+
+.EXAMPLE
+
+Remove-RemoteConnection -Path '\\PRIMARY.testlab.local\C$\'
+
+.EXAMPLE
+
+@('PRIMARY.testlab.local','SECONDARY.testlab.local') | Remove-RemoteConnection
 #>
 
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '')]
@@ -1952,18 +2426,47 @@ function Remove-RemoteConnection {
 
 function Invoke-UserImpersonation {
 <#
+.SYNOPSIS
+
+Creates a new "runas /netonly" type logon and impersonates the token.
+
+Author: Will Schroeder (@harmj0y)  
+License: BSD 3-Clause  
+Required Dependencies: PSReflect  
+
+.DESCRIPTION
+
+This function uses LogonUser() with the LOGON32_LOGON_NEW_CREDENTIALS LogonType
+to simulate "runas /netonly". The resulting token is then impersonated with
+ImpersonateLoggedOnUser() and the token handle is returned for later usage
+with Invoke-RevertToSelf.
 
 .PARAMETER Credential
 
+A [Management.Automation.PSCredential] object with alternate credentials
+to impersonate in the current thread space.
+
 .PARAMETER TokenHandle
+
+An IntPtr TokenHandle returned by a previous Invoke-UserImpersonation.
+If this is supplied, LogonUser() is skipped and only ImpersonateLoggedOnUser()
+is executed.
 
 .PARAMETER Quiet
 
+Suppress any warnings about STA vs MTA.
+
+.EXAMPLE
+
+$SecPassword = ConvertTo-SecureString 'Password123!' -AsPlainText -Force
+$Cred = New-Object System.Management.Automation.PSCredential('TESTLAB\dfm.a', $SecPassword)
+Invoke-UserImpersonation -Credential $Cred
 
 .OUTPUTS
 
 IntPtr
 
+The TokenHandle result from LogonUser.
 #>
 
     [OutputType([IntPtr])]
@@ -2216,7 +2719,7 @@ Outputs a custom object containing the SamAccountName, ServicePrincipalName, and
                 $Out | Add-Member Noteproperty 'DistinguishedName' $DistinguishedName
                 $Out | Add-Member Noteproperty 'ServicePrincipalName' $Ticket.ServicePrincipalName
 
-                
+                # TicketHexStream == GSS-API Frame (see https://tools.ietf.org/html/rfc4121#section-4.1)
                 # No easy way to parse ASN1, so we'll try some janky regex to parse the embedded KRB_AP_REQ.Ticket object
                 if($TicketHexStream -match 'a382....3082....A0030201(?<EtypeLen>..)A1.{1,4}.......A282(?<CipherTextLen>....)........(?<DataToEnd>.+)') {
                     $Etype = [Convert]::ToByte( $Matches.EtypeLen, 16 )
@@ -2752,11 +3255,11 @@ A custom PSObject with LDAP hashtable properties translated.
 }
 
 
-
+########################################################
 #
 # Domain info functions below.
 #
-
+########################################################
 
 function Get-DomainSearcher {
 <#
@@ -4349,11 +4852,11 @@ Custom PSObject with translated object property outliers.
 }
 
 
-
+########################################################
 #
 # "net *" replacements and other fun start below
 #
-
+########################################################
 
 function Get-DomainUser {
 <#
@@ -10280,11 +10783,11 @@ A custom PSObject describing the managed security group.
             if ($PSBoundParameters['Tombstone']) { $ACLArguments['Tombstone'] = $Tombstone }
             if ($PSBoundParameters['Credential']) { $ACLArguments['Credential'] = $Credential }
 
-            
-            
+            # # TODO: correct!
+            # # find the ACLs that relate to the ability to write to the group
             # $xacl = Get-DomainObjectAcl @ACLArguments -Verbose
-            
-            
+            # # $ACLArguments
+            # # double-check that the manager
             # if ($xacl.ObjectType -eq 'bf9679c0-0de6-11d0-a285-00aa003049e2' -and $xacl.AceType -eq 'AccessAllowed' -and ($xacl.ObjectSid -eq $GroupManager.objectsid)) {
             #     $ManagedGroup | Add-Member Noteproperty 'ManagerCanWrite' $True
             # }
@@ -11681,7 +12184,7 @@ A custom PSObject describing the distributed file systems.
                         $prefix_timestamp_start = $comment_end + 1
                         $prefix_timestamp_end = $prefix_timestamp_start + 7
                         # https://msdn.microsoft.com/en-us/library/cc230324.aspx FILETIME
-                        $prefix_timestamp = $blob_data[$prefix_timestamp_start..$prefix_timestamp_end] 
+                        $prefix_timestamp = $blob_data[$prefix_timestamp_start..$prefix_timestamp_end] #dword lowDateTime #dword highdatetime
                         $state_timestamp_start = $prefix_timestamp_end + 1
                         $state_timestamp_end = $state_timestamp_start + 7
                         $state_timestamp = $blob_data[$state_timestamp_start..$state_timestamp_end]
@@ -11956,11 +12459,11 @@ A custom PSObject describing the distributed file systems.
 }
 
 
-
+########################################################
 #
 # GPO related functions.
 #
-
+########################################################
 
 function Get-GptTmpl {
 <#
@@ -13657,13 +14160,13 @@ Ouputs a hashtable representing the parsed GptTmpl.inf file.
 }
 
 
-
+########################################################
 #
 # Functions that enumerate a single host, either through
 # WinNT, WMI, remote registry, or API calls
 # (with PSReflect).
 #
-
+########################################################
 
 function Get-NetLocalGroup {
 <#
@@ -14098,7 +14601,7 @@ https://msdn.microsoft.com/en-us/library/windows/desktop/aa370601(v=vs.85).aspx
                         $Member | Add-Member Noteproperty 'IsDomain' $MemberIsDomain
 
                         # if ($MemberIsDomain) {
-                        
+                        #     # translate the binary sid to a string
                         #     $Member | Add-Member Noteproperty 'SID' ((New-Object System.Security.Principal.SecurityIdentifier($LocalUser.InvokeGet('ObjectSID'),0)).Value)
                         #     $Member | Add-Member Noteproperty 'Description' ''
                         #     $Member | Add-Member Noteproperty 'Disabled' ''
@@ -14119,7 +14622,7 @@ https://msdn.microsoft.com/en-us/library/windows/desktop/aa370601(v=vs.85).aspx
                         #     $Member | Add-Member Noteproperty 'UserFlags' ''
                         # }
                         # else {
-                        
+                        #     # translate the binary sid to a string
                         #     $Member | Add-Member Noteproperty 'SID' ((New-Object System.Security.Principal.SecurityIdentifier($LocalUser.InvokeGet('ObjectSID'),0)).Value)
                         #     $Member | Add-Member Noteproperty 'Description' ($LocalUser.Description)
 
@@ -14134,7 +14637,7 @@ https://msdn.microsoft.com/en-us/library/windows/desktop/aa370601(v=vs.85).aspx
                         #         $Member | Add-Member Noteproperty 'PwdLastSet' ( (Get-Date).AddSeconds(-$LocalUser.PasswordAge[0]))
                         #         $Member | Add-Member Noteproperty 'PwdExpired' ( $LocalUser.PasswordExpired[0] -eq '1')
                         #         $Member | Add-Member Noteproperty 'UserFlags' ( $LocalUser.UserFlags[0] )
-                        
+                        #         # UAC flags of 0x2 mean the account is disabled
                         #         $Member | Add-Member Noteproperty 'Disabled' $(($LocalUser.UserFlags.value -band 2) -eq 2)
                         #         try {
                         #             $Member | Add-Member Noteproperty 'LastLogin' ( $LocalUser.LastLogin[0])
@@ -15941,11 +16444,11 @@ PowerView.FoundFile
 }
 
 
-
+########################################################
 #
 # 'Meta'-functions start below
 #
-
+########################################################
 
 function New-ThreadedFunction {
     # Helper used by any threaded host enumeration functions
@@ -15977,7 +16480,7 @@ function New-ThreadedFunction {
         #   http://powershell.org/wp/forums/topic/invpke-parallel-need-help-to-clone-the-current-runspace/
         $SessionState = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
 
-        
+        # # $SessionState.ApartmentState = [System.Threading.Thread]::CurrentThread.GetApartmentState()
         # force a single-threaded apartment state (for token-impersonation stuffz)
         $SessionState.ApartmentState = [System.Threading.ApartmentState]::STA
 
@@ -16004,7 +16507,7 @@ function New-ThreadedFunction {
         }
 
         # threading adapted from
-        
+        # https://github.com/darkoperator/Posh-SecMod/blob/master/Discovery/Discovery.psm1#L407
         #   Thanks Carlos!
 
         # create a pool of maxThread runspaces
@@ -16482,7 +16985,7 @@ PowerView.UserLocation
                 }
                 if ($StealthSource -match 'DFS|All') {
                     Write-Verbose '[Find-DomainUserLocation] Querying for DFS servers'
-                    
+                    # # TODO: fix the passed parameters to Get-DomainDFSShare
                     # $ComputerName += Get-DomainDFSShare -Domain $Domain -Server $DomainController | ForEach-Object {$_.RemoteServerName}
                 }
                 if ($StealthSource -match 'DC|All') {
@@ -18926,11 +19429,11 @@ Custom PSObject with translated group property fields from WinNT results.
 }
 
 
-
+########################################################
 #
 # Domain trust functions below.
 #
-
+########################################################
 
 function Get-DomainTrust {
 <#
@@ -19806,18 +20309,113 @@ Custom PSObject with translated group member property fields.
 
 function Get-DomainTrustMapping {
 <#
+.SYNOPSIS
+
+This function enumerates all trusts for the current domain and then enumerates
+all trusts for each domain it finds.
+
+Author: Will Schroeder (@harmj0y)  
+License: BSD 3-Clause  
+Required Dependencies: Get-Domain, Get-DomainTrust, Get-ForestTrust  
+
+.DESCRIPTION
+
+This function will enumerate domain trust relationships for the current domain using
+a number of methods, and then enumerates all trusts for each found domain, recursively
+mapping all reachable trust relationships. By default, and LDAP search using the filter
+'(objectClass=trustedDomain)' is used- if any LDAP-appropriate parameters are specified
+LDAP is used as well. If the -NET flag is specified, the .NET method
+GetAllTrustRelationships() is used on the System.DirectoryServices.ActiveDirectory.Domain
+object. If the -API flag is specified, the Win32 API DsEnumerateDomainTrusts() call is
+used to enumerate instead. If any 
+
 .PARAMETER API
+
+Switch. Use an API call (DsEnumerateDomainTrusts) to enumerate the trusts instead of the
+built-in LDAP method.
+
 .PARAMETER NET
+
+Switch. Use .NET queries to enumerate trusts instead of the default LDAP method.
+
 .PARAMETER LDAPFilter
+
+Specifies an LDAP query string that is used to filter Active Directory objects.
+
 .PARAMETER Properties
+
+Specifies the properties of the output object to retrieve from the server.
+
 .PARAMETER SearchBase
+
+The LDAP source to search through, e.g. "LDAP://OU=secret,DC=testlab,DC=local"
+Useful for OU queries.
+
 .PARAMETER Server
+
+Specifies an Active Directory server (domain controller) to bind to.
+
 .PARAMETER SearchScope
+
+Specifies the scope to search under, Base/OneLevel/Subtree (default of Subtree).
+
 .PARAMETER ResultPageSize
+
+Specifies the PageSize to set for the LDAP searcher object.
+
 .PARAMETER ServerTimeLimit
+
+Specifies the maximum amount of time the server spends searching. Default of 120 seconds.
+
 .PARAMETER Tombstone
+
+Switch. Specifies that the searcher should also return deleted/tombstoned objects.
+
 .PARAMETER Credential
+
+A [Management.Automation.PSCredential] object of alternate credentials
+for connection to the target domain.
+
+.EXAMPLE
+
+Get-DomainTrustMapping | Export-CSV -NoTypeInformation trusts.csv
+
+Map all reachable domain trusts using .NET methods and output everything to a .csv file.
+
+.EXAMPLE
+
+Get-DomainTrustMapping -API | Export-CSV -NoTypeInformation trusts.csv
+
+Map all reachable domain trusts using Win32 API calls and output everything to a .csv file.
+
+.EXAMPLE
+
+Get-DomainTrustMapping -NET | Export-CSV -NoTypeInformation trusts.csv
+
+Map all reachable domain trusts using .NET methods and output everything to a .csv file.
+
+.EXAMPLE
+
+$SecPassword = ConvertTo-SecureString 'Password123!' -AsPlainText -Force
+$Cred = New-Object System.Management.Automation.PSCredential('TESTLAB\dfm.a', $SecPassword)
+Get-DomainTrustMapping -Server 'PRIMARY.testlab.local' | Export-CSV -NoTypeInformation trusts.csv
+
+Map all reachable domain trusts using LDAP, binding to the PRIMARY.testlab.local server for queries
+using the specified alternate credentials, and output everything to a .csv file.
+
 .OUTPUTS
+
+PowerView.DomainTrust.LDAP
+
+Custom PSObject with translated domain LDAP trust result fields (default).
+
+PowerView.DomainTrust.NET
+
+A TrustRelationshipInformationCollection returned when using .NET methods.
+
+PowerView.DomainTrust.API
+
+Custom PSObject with translated domain API trust result fields.
 #>
 
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSShouldProcess', '')]
@@ -19965,8 +20563,33 @@ function Get-DomainTrustMapping {
 
 function Get-GPODelegation {
 <#
+.SYNOPSIS
+
+Finds users with write permissions on GPO objects which may allow privilege escalation within the domain.
+
+Author: Itamar Mizrahi (@MrAnde7son)  
+License: BSD 3-Clause  
+Required Dependencies: None  
+
 .PARAMETER GPOName
+
+The GPO display name to query for, wildcards accepted.
+
 .PARAMETER PageSize
+
+Specifies the PageSize to set for the LDAP searcher object.
+
+.EXAMPLE
+
+Get-GPODelegation
+
+Returns all GPO delegations in current forest.
+
+.EXAMPLE
+
+Get-GPODelegation -GPOName
+
+Returns all GPO delegations on a given GPO.
 #>
 
     [CmdletBinding()]
@@ -20007,14 +20630,14 @@ function Get-GPODelegation {
 }
 
 
-
+########################################################
 #
 # Expose the Win32API functions and datastructures below
 # using PSReflect.
 # Warning: Once these are executed, they are baked in
 # and can't be changed while the script is running!
 #
-
+########################################################
 
 $Mod = New-InMemoryModule -ModuleName Win32
 
